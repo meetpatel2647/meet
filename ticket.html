@@ -1,0 +1,2247 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TravelMate — Chatbot Ticketing (Travel & Tourism) — Single File</title>
+  <style>
+    :root{
+      --accent: #0ea5a8;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --muted: #64748b;
+      --text: #0f172a;
+      --border: #e2e8f0;
+      --gradient-main: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
+      --gradient-logo: linear-gradient(135deg,#06b6d4,#7c3aed);
+      --gradient-chat-header: linear-gradient(90deg,rgba(0,0,0,0.02),transparent);
+      --gradient-user-msg: linear-gradient(90deg,#0ea5a8,#7c3aed);
+      --shadow-lg: 0 20px 60px rgba(0,0,0,0.08);
+      --shadow-md: 0 6px 18px rgba(0,0,0,0.05);
+    }
+    *{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    body{margin:0;min-height:100vh;background:var(--gradient-main);color:var(--text);display:flex;flex-direction:column;transition:background-color 0.3s ease-in-out;}
+    header{padding:20px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);animation:fadeInUp 0.6s ease-out;}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:44px;height:44px;border-radius:10px;background:var(--gradient-logo);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;box-shadow:var(--shadow-md)}
+    h1{font-size:18px;margin:0}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+
+    .hero{padding:18px;flex:1}
+    .card{background:var(--card);border-radius:14px;padding:16px;box-shadow:var(--shadow-md);border:1px solid var(--border);animation:fadeIn 0.8s ease-out;}
+    .grid{display:grid;grid-template-columns:1fr;gap:14px}
+
+    .features{display:flex;gap:10px;flex-wrap:wrap}
+    .feature{flex:1 1 150px;padding:12px;border-radius:10px;background:rgba(0,0,0,0.02);min-width:140px;border:1px solid var(--border);animation:fadeInUp 0.8s ease-out 0.2s backwards;}
+    .feature h3{margin:0;font-size:14px;color:var(--accent)}
+    .feature p{margin:6px 0 0;color:var(--muted);font-size:13px}
+
+    /* chatbot button */
+    .chat-toggle{position:fixed;right:18px;bottom:18px;background:var(--gradient-logo);width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-lg);cursor:pointer;transition:transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;}
+    .chat-toggle:hover{transform:scale(1.05);box-shadow:0 12px 40px rgba(0,0,0,0.1);}
+    .chat-toggle span{font-size:28px}
+
+    /* chatbot window */
+    .chat-window{position:fixed;right:18px;bottom:92px;width:360px;max-width:calc(100% - 36px);height:520px;background:var(--card);border-radius:14px;display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--shadow-lg);border:1px solid var(--border);z-index:999;}
+    .chat-header{padding:12px 14px;background:rgba(0,0,0,0.03);display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);animation:fadeIn 0.5s ease-out;}
+    .chat-header h2{margin:0;font-size:15px}
+    .chat-body{flex:1;padding:12px 14px;overflow-y:auto; display: flex; flex-direction: column;}
+    .msg{max-width:78%;padding:10px 12px;border-radius:12px;margin-bottom:10px;transition:all 0.3s ease-in-out;}
+    .bot{background:#f1f5f9;border:1px solid var(--border);align-self:flex-start; white-space: pre-wrap;animation:fadeIn 0.5s ease-out;}
+    .user{background:var(--gradient-user-msg);color:white;align-self:flex-end;animation:fadeIn 0.5s ease-out;}
+    .chat-input{display:flex;padding:10px;border-top:1px solid var(--border)}
+    .chat-input input{flex:1;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);outline:none;transition:border-color 0.2s ease-in-out;}
+    .chat-input input:focus{border-color:var(--accent);}
+    .chat-input button{margin-left:8px;padding:12px 14px;border-radius:10px;border:0;background:var(--accent);color:white;cursor:pointer;transition:transform 0.2s ease-in-out, background-color 0.2s ease-in-out;}
+    .chat-input button:hover{transform:scale(1.05);}
+    .chat-input button:disabled{background-color:rgba(14, 165, 168, 0.5);cursor:not-allowed;}
+    .loading-dot{display:inline-block;width:8px;height:8px;margin:0 2px;background-color:var(--accent);border-radius:50%;animation:bounce 1.4s infinite ease-in-out;}
+    .loading-dot:nth-child(2){animation-delay:-0.3s;}
+    .loading-dot:nth-child(3){animation-delay:-0.6s;}
+
+    /* tickets page */
+    .tickets{margin-top:14px;animation:fadeInUp 0.8s ease-out;}
+    .ticket{background:rgba(0,0,0,0.02);padding:12px;border-radius:10px;margin-bottom:10px;border:1px solid var(--border);}
+    .ticket .meta{font-size:12px;color:var(--muted)}
+
+    /* small and responsive */
+    @media (max-width:480px){.chat-window{width:96%;right:2%;bottom:80px;height:70vh}}
+
+    /* admin modal */
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(255,255,255,0.6); z-index: 1000;}
+    .modal .modal-card{width:520px;max-width:96%;background:var(--card);padding:18px;border-radius:12px;box-shadow:var(--shadow-lg);border:1px solid var(--border);}
+    .btn{padding:10px 14px;border-radius:8px;border:0;background:var(--accent);color:white;cursor:pointer;transition:background-color 0.2s ease-in-out, transform 0.2s ease-in-out;}
+    .btn:hover{background-color:#06b6d4;transform:scale(1.02);}
+    a{color:var(--accent)}
+
+    /* Custom message box for alerts */
+    .msg-box{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#ef4444;color:white;padding:10px 20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.2);display:none;z-index:1001;}
+    .msg-box.visible{display:block;}
+
+    /* Animations */
+    @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+    @keyframes bounce{0%,80%,100%{transform:scale(0);}40%{transform:scale(1);}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo">TM</div>
+      <div>
+        <h1>TravelMate</h1>
+        <p class="lead">Travel & Tourism — Chatbot ticketing (single file)</p>
+      </div>
+    </div>
+    <div>
+      <button class="btn" id="openTickets">My Tickets</button>
+      <button class="btn" id="openAdmin" style="margin-left:8px;">Admin</button>
+    </div>
+  </header>
+
+  <main class="hero">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div style="flex:1">
+          <h2 style="margin:0">Plan your next trip with TravelMate</h2>
+          <p class="lead">Chat to search flights, hotels, raise support tickets for refunds & more — powered by Gemini.</p>
+        </div>
+        <div style="min-width:160px;text-align:right">
+          <small class="lead">Tip: Tap the chat button at bottom-right to begin.</small>
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top:14px">
+        <div class="features">
+          <div class="feature">
+            <h3>Instant Booking (Demo)</h3>
+            <p>Search & book flights and hotels using demo data stored locally.</p>
+          </div>
+          <div class="feature">
+            <h3>Support Tickets</h3>
+            <p>Create & track refund/cancellation/complaint tickets (local storage).</p>
+          </div>
+          <div class="feature">
+            <h3>Admin (Local)</h3>
+            <p>Simple admin panel to change ticket statuses (demo password).</p>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:10px">
+          <h3 style="margin:0 0 8px 0">Quick demo actions</h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn" onclick="demo('book flight')">Book flight</button>
+            <button class="btn" onclick="demo('hotel')">Book hotel</button>
+            <button class="btn" onclick="demo('refund')">Request refund</button>
+            <button class="btn" onclick="demo('complaint')">Raise complaint</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tickets" id="ticketsSection" style="display:none; margin-top:14px">
+        <h3>My Tickets</h3>
+        <div id="ticketsList"></div>
+        <div style="margin-top:8px;">
+          <button class="btn" id="closeTickets">Close</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Chat toggle -->
+  <div class="chat-toggle" id="chatToggle" title="Open chat"><span>💬</span></div>
+
+  <!-- Chat window -->
+  <div class="chat-window" id="chatWindow" style="display:none">
+    <div class="chat-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(90deg,#06b6d4,#7c3aed);display:flex;align-items:center;justify-content:center;color:white;">✈️</div>
+        <div>
+          <h2>TravelMate Assistant</h2>
+          <div class="meta" style="font-size:12px;color:var(--muted)">Ask me to book flights, hotels or raise tickets</div>
+        </div>
+      </div>
+      <div style="margin-left:auto">
+        <button class="btn" id="closeChat">Close</button>
+      </div>
+    </div>
+    <div class="chat-body" id="chatBody">
+      <div class="msg bot">Hi! I'm TravelMate, your personal travel assistant. I can help with flight and hotel bookings, and with creating support tickets. How can I help you? Try: "Search flights from Delhi to Goa" or "Find a hotel in Paris".</div>
+    </div>
+    <div class="chat-input">
+      <input id="chatInput" placeholder="Type message... (e.g., search flights, book hotel)" />
+      <button id="sendBtn">Send</button>
+    </div>
+  </div>
+
+  <!-- admin modal -->
+  <div class="modal" id="adminModal">
+    <div class="modal-card">
+      <h3>Admin Panel</h3>
+      <p class="lead">Enter admin password to manage tickets.</p>
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <input id="adminPass" placeholder="password" type="password" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text)" />
+        <button class="btn" id="adminLogin">Login</button>
+      </div>
+      <div id="adminArea" style="margin-top:12px;display:none">
+        <h4>All Tickets</h4>
+        <div id="adminTickets"></div>
+        <div style="margin-top:8px;text-align:right"><button class="btn" id="adminLogout">Logout</button></div>
+      </div>
+      <div style="margin-top:10px;text-align:right"><button class="btn" id="closeAdmin">Close</button></div>
+    </div>
+  </div>
+
+  <div class="msg-box" id="messageBox"></div>
+
+  <footer style="padding:16px;text-align:center;color:var(--muted)">Demo project — single-file HTML (frontend-only). Admin demo password: <strong>admin123</strong></footer>
+
+  <script>
+    // Single-file frontend-only implementation that contains the demo 'backend' logic in JS.
+    // All data stored in localStorage: 'tm_tickets' and 'tm_bookings'. No server required.
+
+    // --- Gemini API Configuration ---
+    const API_KEY = "AIzaSyC5stF7hXeRE3K1J-rnU1u-DSfTSmjbpi8";
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
+    
+    // --- Message box for UI ---
+    function showMessage(text, isError = true) {
+        const msgBox = document.getElementById('messageBox');
+        msgBox.innerText = text;
+        msgBox.style.backgroundColor = isError ? '#ef4444' : '#22c55e';
+        msgBox.classList.add('visible');
+        setTimeout(() => {
+            msgBox.classList.remove('visible');
+        }, 3000);
+    }
+
+    // Elements
+    const chatToggle = document.getElementById('chatToggle');
+    const chatWindow = document.getElementById('chatWindow');
+    const closeChat = document.getElementById('closeChat');
+    const chatBody = document.getElementById('chatBody');
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const openTickets = document.getElementById('openTickets');
+    const ticketsSection = document.getElementById('ticketsSection');
+    const ticketsList = document.getElementById('ticketsList');
+    const closeTickets = document.getElementById('closeTickets');
+    const adminBtn = document.getElementById('openAdmin');
+    const adminModal = document.getElementById('adminModal');
+    const adminLogin = document.getElementById('adminLogin');
+    const adminPass = document.getElementById('adminPass');
+    const adminArea = document.getElementById('adminArea');
+    const adminTickets = document.getElementById('adminTickets');
+    const adminLogout = document.getElementById('adminLogout');
+    const closeAdmin = document.getElementById('closeAdmin');
+
+    // Utilities
+    function appendMsg(text, who='bot'){
+      const el = document.createElement('div');
+      el.className = 'msg ' + (who==='bot' ? 'bot' : 'user');
+      el.innerHTML = who === 'bot' ? text.replace(/\n/g, '<br>') : text;
+      chatBody.appendChild(el);
+      chatBody.scrollTop = chatBody.scrollHeight;
+    }
+    
+    function showTypingIndicator() {
+      const el = document.createElement('div');
+      el.className = 'msg bot typing-indicator';
+      el.innerHTML = '<span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>';
+      chatBody.appendChild(el);
+      chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    function removeTypingIndicator() {
+      const el = chatBody.querySelector('.typing-indicator');
+      if (el) el.remove();
+    }
+
+    chatToggle.addEventListener('click', ()=>{ chatWindow.style.display='flex'; chatToggle.style.display='none'; });
+    closeChat.addEventListener('click', ()=>{ chatWindow.style.display='none'; chatToggle.style.display='flex'; });
+
+    sendBtn.addEventListener('click', handleSend);
+    chatInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') handleSend(); });
+
+    // --- Main chat handling with API call (Updated) ---
+    async function handleSend(){ 
+      const text = chatInput.value.trim();
+      if(!text) return;
+      appendMsg(text,'user');
+      chatInput.value='';
+
+      // Check for demo intents first
+      if (['search flight', 'book flight', 'search hotel', 'book hotel', 'refund', 'complaint', 'ticket status', 'check ticket', 'my ticket', 'hello', 'hi'].some(intent => text.toLowerCase().includes(intent))) {
+        processText(text.toLowerCase());
+      } else {
+        await processTextWithGemini(text);
+      }
+    }
+
+    async function processTextWithGemini(userText) {
+      sendBtn.disabled = true;
+      sendBtn.innerText = '...';
+      showTypingIndicator();
+
+      const payload = {
+        contents: [{ parts: [{ text: userText }] }]
+      };
+
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        const generatedText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (generatedText) {
+          appendMsg(generatedText);
+        } else {
+          appendMsg('Sorry, I couldn\'t generate a response. Please try again.');
+        }
+
+      } catch (error) {
+        console.error('API Error:', error);
+        appendMsg('An error occurred. Please check your API key and network connection.');
+      } finally {
+        removeTypingIndicator();
+        sendBtn.disabled = false;
+        sendBtn.innerText = 'Send';
+      }
+    }
+
+    // Demo 'backend' functions (localStorage based)
+    function db_read(key){ try{ return JSON.parse(localStorage.getItem(key) || '[]'); }catch(e){ return []; } }
+    function db_write(key, data){ localStorage.setItem(key, JSON.stringify(data)); }
+
+    function searchFlightsLocal(query){
+      const demo = [
+        { id:'FL1001', from:'Delhi', to:'Goa', date:'Oct 10', time:'07:30', price:'₹3,199' },
+        { id:'FL1002', from:'Mumbai', to:'Goa', date:'Oct 11', time:'09:00', price:'₹2,999' },
+        { id:'FL1003', from:'Delhi', to:'Bangalore', date:'Oct 12', time:'12:30', price:'₹4,499' }
+      ];
+      const q = (query||'').toLowerCase();
+      return demo.filter(f=> q.includes(f.from.toLowerCase()) || q.includes(f.to.toLowerCase()));
+    }
+
+    function searchHotelsLocal(query) {
+      const demo = [
+        { id:'HTL2001', name:'The Grand Hotel', city:'Paris', rating:5, price:'₹15,000/night' },
+        { id:'HTL2002', name:'Riverside Inn', city:'Paris', rating:4, price:'₹9,000/night' },
+        { id:'HTL2003', name:'Beach Paradise Resort', city:'Goa', rating:4, price:'₹8,500/night' }
+      ];
+      const q = (query||'').toLowerCase();
+      return demo.filter(h => q.includes(h.city.toLowerCase()));
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+    
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+    
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+    
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+  
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+    
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+    
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+
+    function doSearchFlights(text){
+      appendMsg('Searching flights (demo)...');
+      const results = searchFlightsLocal(text);
+      if(results.length===0) return appendMsg('No demo flights found. Try: "Search flights Delhi to Goa"');
+      let msg = 'Found flights (demo):\n';
+      results.forEach((f,i)=> msg += `${i+1}) ${f.from} → ${f.to} | ${f.time} | ${f.price} | id: ${f.id}\n`);
+      appendMsg(msg);
+    }
+    
+    function doSearchHotels(text) {
+      appendMsg('Searching hotels (demo)...');
+      const results = searchHotelsLocal(text);
+      if(results.length===0) return appendMsg('No demo hotels found. Try: "Find a hotel in Paris"');
+      let msg = 'Found hotels (demo):\n';
+      results.forEach((h,i)=> msg += `${i+1}) ${h.name} (${h.rating}⭐) | ${h.price} | id: ${h.id}\n`);
+      appendMsg(msg);
+    }
+
+    function bookLocal(itemType, itemId){
+      const bookings = db_read('tm_bookings');
+      const bookingId = 'BK' + Date.now().toString().slice(-6);
+      bookings.push({ bookingId, type: itemType, itemId, created: new Date().toISOString() });
+      db_write('tm_bookings', bookings);
+      return bookingId;
+    }
+
+    function createTicketLocal(type, summary){
+      const tickets = db_read('tm_tickets');
+      const id = 'TR' + Math.floor(Math.random()*90000 + 10000);
+      const t = { id, type: type||'General', summary: summary||'', status: 'Pending', created: new Date().toISOString() };
+      tickets.push(t); db_write('tm_tickets', tickets); return t;
+    }
+
+    function getTicketsLocal(){ return db_read('tm_tickets'); }
+
+    function updateTicketLocal(id, updates){
+      const tickets = db_read('tm_tickets');
+      const t = tickets.find(x=>x.id===id); if(!t) return null; Object.assign(t, updates); db_write('tm_tickets', tickets); return t;
+    }
+
+    function adminLoginLocal(password){ return password === 'admin123'; }
+
+    // Intent processing (uses local functions)
+    function processText(t){
+      if(t.includes('search') && t.includes('flight')) return doSearchFlights(t);
+      if(t.includes('search') && t.includes('hotel')) return doSearchHotels(t);
+      if(t.includes('book') && t.includes('flight')) return beginBookFlow('flight');
+      if(t.includes('book') && t.includes('hotel')) return beginBookFlow('hotel');
+      if(t.includes('refund') || t.includes('money back')) return beginRefundFlow(t);
+      if(t.includes('complaint') || t.includes('problem') || t.includes('not happy')) return beginComplaintFlow(t);
+      if(t.includes('ticket status') || t.includes('check ticket') || t.includes('my ticket')) return showTickets();
+      if(t.includes('hello')||t.includes('hi')) return appendMsg('Hello! How can I help with your travel plans? Try searching for a flight or hotel.');
+      appendMsg('I can help with:\n• Search flights (e.g., "Search flights Delhi to Goa")\n• Search hotels (e.g., "Find a hotel in Paris")\n• Request refund\n• Raise complaint');
+    }
+  </script>
+</body>
+</html>
